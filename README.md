@@ -10,12 +10,13 @@ memory >= 2GB
 
 
 ## Folders
-###Standard_LSTM: Standard LSTM Autoencoder
-###hier_LSTM: Hierarchical LSTM Autoencoder 
-###hier_LSTM_Attention: Hierarchical LSTM Autoencoder with Attention 
+Standard_LSTM: Standard LSTM Autoencoder
 
-## DownLoad Data
-[data](http://cs.stanford.edu/~bdlijiwei/data.tar)
+hier_LSTM: Hierarchical LSTM Autoencoder 
+
+hier_LSTM_Attention: Hierarchical LSTM Autoencoder with Attention 
+
+## DownLoad [Data]http://cs.stanford.edu/~bdlijiwei/data.tar)
 - `dictionary`: vocabulary
 - `train_permute.txt`: training data for standard Model. Each line corresponds to one document/paragraph
 - `train_source_permute_segment.txt`: source training data for hierarchical Models. Each line corresponds to one sentence. An empty line starts a new document/sentence. Documents are reversed. 
