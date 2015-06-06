@@ -7,17 +7,18 @@ GPU
 matlab >= 2014b
 memory >= 2GB
 
+
+
 ## Folders
+###Standard_LSTM: Standard LSTM Autoencoder
+###hier_LSTM: Hierarchical LSTM Autoencoder 
+###hier_LSTM_Attention: Hierarchical LSTM Autoencoder with Attention 
 
-Standard_LSTM: Standard LSTM Autoencoder
-
-hier_LSTM: Hierarchical LSTM Autoencoder 
-
-hier_LSTM_Attention: Hierarchical LSTM Autoencoder with Attention 
-
-data:
+## DownLoad Data
+[data](http://cs.stanford.edu/~bdlijiwei/data.tar)
 - `dictionary`: vocabulary
 - `train_permute.txt`: training data for standard Model. Each line corresponds to one document/paragraph
-- `train_source_permute_segment.txt`: source training data for hierarchical Model. Each line corresponds to a sentence. An empty line starts a new document/sentence. Documents are reversed. 
-- `test_source_permute_segment.txt`: target training data for hierarchical Model. Each line corresponds to a sentence. An empty line starts a new document/sentence.
+- `train_source_permute_segment.txt`: source training data for hierarchical Models. Each line corresponds to one sentence. An empty line starts a new document/sentence. Documents are reversed. 
+- `test_source_permute_segment.txt`: target training data for hierarchical Model.
+
 
