@@ -12,28 +12,29 @@ else
 end
 
 parameter.dimension=1000;
-parameter.alpha=0.1;%learning rate
-parameter.layer_num=4;%number of layer
+parameter.alpha=0.1;    %learning rate
+parameter.layer_num=4;  %number of layer
 parameter.hidden=1000;
 parameter.lstm_out_tanh=0;
 parameter.Initial=0.08;
-parameter.dropout=0.2;%drop-out rate
+parameter.dropout=0.2;  %drop-out rate
 params.lstm_out_tanh=0;
 parameter.isTraining=1;
-parameter.CheckGrad=0;%whether check gradient or not.
-parameter.PreTrainEmb=0;%whether using pre-trained embeddings
-parameter.update_embedding=1;%whether update word embeddings
-parameter.batch_size=32;%mini-batch size
-parameter.Source_Target_Same_Language=1;%whether source and target is of the same language. For author-encoder task, it is.
-parameter.maxGradNorm=1;%gradient clipping
+parameter.CheckGrad=0;  %whether check gradient or not.
+parameter.PreTrainEmb=0;    %whether using pre-trained embeddings
+parameter.update_embedding=1;   %whether update word embeddings
+parameter.batch_size=32;    %mini-batch size
+parameter.Source_Target_Same_Language=1;
+%whether source and target is of the same language. For author-encoder task, it is.
+parameter.maxGradNorm=1;    %gradient clipping
 parameter.clip=1;
 
 parameter.lr=5;
 parameter.read=0;
 
 if parameter.Source_Target_Same_Language==1
-    parameter.Vocab=25001; %vocabulary size plus document-end token
-    parameter.stop=parameter.Vocab;%document-end token
+    parameter.Vocab=25001;  %vocabulary size plus document-end token
+    parameter.stop=parameter.Vocab;     %document-end token
 else
     parameter.SourceVocab=20;
     parameter.TargetVocab=20;
@@ -41,7 +42,7 @@ else
     parameter.Vocab=parameter.SourceVocab+parameter.TargetVocab;
 end
 
-if parameter.CheckGrad==1&parameter.dropout~=0 %use identical dropout-vector for gradient checking
+if parameter.CheckGrad==1&parameter.dropout~=0  %use identical dropout-vector for gradient checking
     parameter.drop_left_1=randSimpleMatrix([parameter.dimension,1])<1-parameter.dropout;
     parameter.drop_left=randSimpleMatrix([parameter.hidden,1])<1-parameter.dropout;
 end
@@ -59,9 +60,6 @@ test_source_file='../data/test.txt';
 test_target_file='../data/test.txt';
 
 
-train_source_file='../../LSTM_Encode_Decode/data/train_permute.txt';
-train_target_file='../../LSTM_Encode_Decode/data/train_permute.txt';
-
 if 1==0
 train_source_file='../data/very_small.txt';
 train_target_file='../data/very_small.txt';
@@ -77,8 +75,8 @@ end
 
 if parameter.read==1
     disp('read');
-    parameter=ReadParameter(parameter);%read from exisitng parameter
-else [parameter]=Initial(parameter);%rand initialization
+    parameter=ReadParameter(parameter);     %read from exisitng parameter
+else [parameter]=Initial(parameter);        %rand initialization
 end
 
 iter=0;
@@ -88,37 +86,37 @@ disp('begin')
 while 1
     iter=iter+1;
     End=0;
-    fd_train_source=fopen(train_source_file);%read source
-    fd_train_target=fopen(train_target_file);%read target
+    fd_train_source=fopen(train_source_file);   %read source
+    fd_train_target=fopen(train_target_file);   %read target
     sum_cost=0;
     sum_num=0;
     batch_n=0;
     while 1
         batch_n=batch_n+1;
-        [batch,End]=ReadTrainData(fd_train_source,fd_train_target,parameter);%transform data to batches
+        [batch,End]=ReadTrainData(fd_train_source,fd_train_target,parameter);   %transform data to batches
         
-        if End~=1 || (End==1&& length(batch.Word)~=0)%not the end of document
-            [lstm,all_h_t,c]=Forward(batch,parameter,1);%LSTM Forward
+        if End~=1 || (End==1&& length(batch.Word)~=0)   %not the end of document
+            [lstm,all_h_t,c]=Forward(batch,parameter,1);    %LSTM Forward
             disp('forward done')
-            [batch_cost,grad]=softmax(all_h_t(parameter.layer_num,:),batch,parameter);%softmax
+            [batch_cost,grad]=softmax(all_h_t(parameter.layer_num,:),batch,parameter);      %softmax
             disp('softmax done')
             clear all_h_t;
-            if (isnan(batch_cost)||isinf(batch_cost)) &&End~=1%if gradient explodes
+            if (isnan(batch_cost)||isinf(batch_cost)) &&End~=1  %if gradient explodes
                 if parameter.clip==1
                     fprintf('die !! Hopeless!!\n');
                     disp('read done');
-                    parameter=pre_parameter;%load parameters stores from last step, and skip lately used batches
+                    parameter=pre_parameter;    %load parameters stores from last step, and skip lately used batches
                     disp(batch_n)
                 else parameter.clip=1;
                 end
-                if End==1 break;%end of documents
+                if End==1 break;    %end of documents
                 else continue;
                 end
             end
             if parameter.isTraining==1
-                grad=Backward(batch,grad,parameter,lstm,c);%backward
+                grad=Backward(batch,grad,parameter,lstm,c);     %backward
                 disp('backward done')
-                [parameter]=update_parameter(parameter,grad);%update parameter
+                [parameter]=update_parameter(parameter,grad);   %update parameter
                 clear lstm;
                 clear c;
             end
@@ -129,7 +127,7 @@ while 1
             break;
         end
 
-        if mod(batch_n,500)==0%save parameter every 500 batches
+        if mod(batch_n,500)==0  %save parameter every 500 batches
             pre_parameter=parameter;
             SaveParameter(parameter,-1);
         end
@@ -138,11 +136,11 @@ while 1
             1000*batch_cost/batch.N_word
         end
     end
-    SaveParameter(parameter,iter);%save parameter
+    SaveParameter(parameter,iter);  %save parameter
 end
 end
 
-function[parameter]=ReadParameter(parameter)%read parameter
+function[parameter]=ReadParameter(parameter)    %read parameter
     for ll=1:parameter.layer_num
         W_file=strcat('save_parameter/_W_S',num2str(ll));
         parameter.W_S{ll}=gpuArray(load(W_file));
@@ -177,10 +175,10 @@ function SaveParameter(parameter,iter)
     dlmwrite(soft_W_file,parameter.soft_W);
 end
 
-function[parameter]=update_parameter(parameter,grad)%update parameters
-    norm=computeGradNorm(grad,parameter);%compute normalization
+function[parameter]=update_parameter(parameter,grad)    %update parameters
+    norm=computeGradNorm(grad,parameter);       %compute normalization
     if norm>parameter.maxGradNorm
-        lr=parameter.alpha*parameter.maxGradNorm/norm;%normalizing
+        lr=parameter.alpha*parameter.maxGradNorm/norm;  %normalizing
     else lr=parameter.alpha;
     end
     for ll=1:parameter.layer_num
@@ -222,11 +220,11 @@ function[current_batch,End]=ReadTrainData(fd_s,fd_t,parameter)
         text_s=deblank(tline_s);
         text_t=deblank(tline_t);
         if parameter.Source_Target_Same_Language~=1
-            Source{i}=wrev(str2num(text_s))+parameter.TargetVocab;%reverse inputs
+            Source{i}=wrev(str2num(text_s))+parameter.TargetVocab;  %reverse inputs
         else
-            Source{i}=wrev(str2num(text_s));%reverse inputs
+            Source{i}=wrev(str2num(text_s));    %reverse inputs
         end
-        Target{i}=[str2num(text_t),parameter.stop];%add document_end_token
+        Target{i}=[str2num(text_t),parameter.stop];     %add document_end_token
         if i==parameter.batch_size
             break;
         end
@@ -252,14 +250,15 @@ function[current_batch,End]=ReadTrainData(fd_s,fd_t,parameter)
     total_length=current_batch.MaxLenSource+current_batch.MaxLenTarget;
     current_batch.MaxLen=total_length;
     current_batch.Word=ones(N,total_length);
-    Mask=ones(N,total_length);% Mask: labeling positions where no words exisit. The purpose is to work on sentences in bulk making program faster
+    Mask=ones(N,total_length);
+    % Mask: labeling positions where no words exisit. The purpose is to work on sentences in bulk making program faster
     for j=1:N
         source_length=length(Source{j});
         target_length=length(Target{j});
-        current_batch.Word(j,current_batch.MaxLenSource-source_length+1:current_batch.MaxLenSource)=Source{j};%words from sentneces 
+        current_batch.Word(j,current_batch.MaxLenSource-source_length+1:current_batch.MaxLenSource)=Source{j};      %words from sentneces 
         current_batch.Word(j,current_batch.MaxLenSource+1:current_batch.MaxLenSource+target_length)=Target{j};
-        Mask(j,1:current_batch.MaxLenSource-source_length)=0;%Mask
-        Mask(j,current_batch.MaxLenSource+target_length+1:end)=0;%Mask
+        Mask(j,1:current_batch.MaxLenSource-source_length)=0;       %Mask
+        Mask(j,current_batch.MaxLenSource+target_length+1:end)=0;   %Mask
         current_batch.N_word=current_batch.N_word+target_length;
     end
     for j=1:total_length
@@ -331,7 +330,7 @@ function check_vect(value1,i,j,batch,parameter)
     value1-value2
 end
 
-function[norm]=computeGradNorm(grad,parameter)%compute gradient norm
+function[norm]=computeGradNorm(grad,parameter)  %compute gradient norm
     norm=0;
     for ii=1:parameter.layer_num
         norm=norm+double(sum(grad.W_S{ii}(:).^2));
