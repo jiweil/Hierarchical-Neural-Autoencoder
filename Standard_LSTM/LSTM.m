@@ -46,7 +46,6 @@ if parameter.CheckGrad==1&parameter.dropout~=0  %use identical dropout-vector fo
     parameter.drop_left_1=randSimpleMatrix([parameter.dimension,1])<1-parameter.dropout;
     parameter.drop_left=randSimpleMatrix([parameter.hidden,1])<1-parameter.dropout;
 end
-%alpha: learning rate for minibatch
 
 parameter.nonlinear_gate_f = @sigmoid;
 parameter.nonlinear_gate_f_prime = @sigmoidPrime;

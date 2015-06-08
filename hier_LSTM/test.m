@@ -1,6 +1,6 @@
 function[]=test()
 clear;
-%matlabpool open 16
+
 addpath('../misc');
 n= gpuDeviceCount;
 parameter.isGPU = 0;
@@ -12,29 +12,34 @@ else
     print('no gpu ! ! ! ! !');
 end
 
-parameter.dimension=1000;
-parameter.alpha=0.1;
-parameter.layer_num=4;
-parameter.hidden=1000;
+parameter.dimension=100;
+parameter.alpha=0.1;  %learning rate
+parameter.layer_num=4;  %number of layer
+parameter.hidden=100;
 parameter.lstm_out_tanh=0;
-parameter.Initial=0.08;
-parameter.dropout=0.2;
+parameter.Initial=0.1;
+parameter.dropout=0.2;  %drop-out rate
 params.lstm_out_tanh=0;
 parameter.isTraining=1;
-parameter.CheckGrad=0;
-parameter.PreTrainEmb=0;
+parameter.CheckGrad=0;   %whether check gradient or not.
+parameter.PreTrainEmb=0;    
+%whether using pre-trained embeddings
 parameter.update_embedding=1;
+%whether update word embeddings
 parameter.batch_size=32;
 parameter.Source_Target_Same_Language=1;
+%whether source and target is of the same language. For author-encoder task, it is.
 parameter.maxGradNorm=1;
-parameter.clip=1;
+parameter.clip=0;
 
 parameter.lr=5;
-parameter.read=1;
+parameter.read=0;
 
 if parameter.Source_Target_Same_Language==1
-    parameter.Vocab=25001;
-    parameter.stop=parameter.Vocab;
+    parameter.Vocab=25002; 
+    %vocabulary size plus sentence-end and document-end
+    parameter.sen_stop=parameter.Vocab-1;   %sentence-end
+    parameter.doc_stop=parameter.Vocab;     %document-end
 else
     parameter.SourceVocab=20;
     parameter.TargetVocab=20;
@@ -43,7 +48,6 @@ else
 end
 
 if parameter.CheckGrad==1&parameter.dropout~=0
-    parameter.drop_left_1=randSimpleMatrix([parameter.dimension,1])<1-parameter.dropout;
     parameter.drop_left=randSimpleMatrix([parameter.hidden,1])<1-parameter.dropout;
 end
 %alpha: learning rate for minibatch
@@ -53,13 +57,6 @@ parameter.nonlinear_gate_f_prime = @sigmoidPrime;
 parameter.nonlinear_f = @tanh;
 parameter.nonlinear_f_prime = @tanhPrime;
 
-
-train_source_file='../data/train_permute.txt';
-train_target_file='../data/train_permute.txt';
-test_source_file='../data/test.txt';
-test_target_file='../data/test.txt';
-
-parameter=ReadParameter(parameter);
 Test=ReadTestData(test_source_file,parameter);
 TestBatches=GetTestBatch(Test,32,parameter);
 disp('decode begin')%greedy decoding
@@ -126,5 +123,26 @@ function[parameter]=ReadParameter(parameter)
     end
     parameter.vect=gpuArray(load('save_parameter/_v'));
     parameter.soft_W=gpuArray(load('save_parameter/_soft_W'));
+end
+function[parameter]=Initial(parameter)
+    %random initialization
+    m=parameter.Initial;
+    for i=1:parameter.layer_num
+        if i==1
+            parameter.Word_S{i}=randomMatrix(parameter.Initial,[4*parameter.hidden,parameter.dimension+parameter.hidden]);
+            parameter.Word_T{i}=randomMatrix(parameter.Initial,[4*parameter.hidden,parameter.dimension+parameter.hidden]);
+        else
+            parameter.Word_S{i}=randomMatrix(parameter.Initial,[4*parameter.hidden,2*parameter.hidden]);
+            parameter.Word_T{i}=randomMatrix(parameter.Initial,[4*parameter.hidden,2*parameter.hidden]);
+        end
+        parameter.Sen_S{i}=randomMatrix(parameter.Initial,[4*parameter.hidden,parameter.dimension+parameter.hidden]);
+        parameter.Sen_T{i}=randomMatrix(parameter.Initial,[4*parameter.hidden,parameter.dimension+parameter.hidden]);
+    end
+    parameter.vect=randomMatrix(parameter.Initial,[parameter.dimension,parameter.Vocab]);
+    if parameter.Source_Target_Same_Language==1
+        parameter.soft_W=randomMatrix(parameter.Initial,[parameter.Vocab,parameter.hidden]);
+    else
+        parameter.soft_W=randomMatrix(parameter.Initial,[parameter.TargetVocab,parameter.hidden]);
+    end
 end
 
