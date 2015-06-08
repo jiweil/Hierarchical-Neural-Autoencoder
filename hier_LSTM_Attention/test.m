@@ -73,13 +73,19 @@ end
 end
 
 function[parameter]=ReadParameter(parameter)
+    % read parameters
     for ll=1:parameter.layer_num
-        W_file=strcat('save_parameter/_W_S',num2str(ll));
-        parameter.W_S{ll}=gpuArray(load(W_file));
-        W_file=strcat('save_parameter/_W_T',num2str(ll));
-        parameter.W_T{ll}=gpuArray(load(W_file));
+        W_file=strcat('save_parameter/_Word_S',num2str(ll));
+        parameter.Word_S{ll}=gpuArray(load(W_file));
+        W_file=strcat('save_parameter/_Word_T',num2str(ll));
+        parameter.Word_T{ll}=gpuArray(load(W_file));
+        W_file=strcat('save_parameter/_Sen_S',num2str(ll));
+        parameter.Sen_S{ll}=gpuArray(load(W_file));
+        W_file=strcat('save_parameter/_Sen_T',num2str(ll));
+        parameter.Sen_T{ll}=gpuArray(load(W_file));
     end
+    parameter.Attention_W=gpuArray(load('save_parameter/_Attention_W'));
+    parameter.Attention_U=gpuArray(load('save_parameter/_Attention_U'));
     parameter.vect=gpuArray(load('save_parameter/_v'));
     parameter.soft_W=gpuArray(load('save_parameter/_soft_W'));
 end
-

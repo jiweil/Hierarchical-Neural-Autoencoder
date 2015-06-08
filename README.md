@@ -1,10 +1,12 @@
 # A Hierarchical Neural Autoencoder for Paragraphs and Documents
 
-Implementations of the three models presented in the paper "A Hierarchical Neural Autoencoder for Paragraphs and Documents" by Jiwei Li, Minh-Thang Luong and Dan Jurafsky.
+Implementations of the three models presented in the paper "A Hierarchical Neural Autoencoder for Paragraphs and Documents" by Jiwei Li, Minh-Thang Luong and Dan Jurafsky, ACL 2015
 
 ## Requirements:
 GPU 
+
 matlab >= 2014b
+
 memory >= 2GB
 
 
@@ -23,3 +25,13 @@ hier_LSTM_Attention: Hierarchical LSTM Autoencoder with Attention
 - `test_source_permute_segment.txt`: target training data for hierarchical Model.
 
 
+For any question or bug with the code, feel free to contact jiweil@stanford.edu
+
+```latex
+@article{li2015hierarchical,
+    title={A Hierarchical Neural Autoencoder for Paragraphs and Documents},
+    author={Li, Jiwei and Luong, Minh-Thang and Jurafsky, Dan},
+    journal={arXiv preprint arXiv:1506.01057},
+    year={2015}
+}
+```

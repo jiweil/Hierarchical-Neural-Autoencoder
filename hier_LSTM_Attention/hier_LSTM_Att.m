@@ -1,6 +1,5 @@
 function[]=hier_LSTM_Att()
 clear;
-%matlabpool open 16
 addpath('../misc');
 n= gpuDeviceCount;
 parameter.isGPU = 0;
@@ -13,19 +12,22 @@ else
 end
 
 parameter.dimension=1000;
-parameter.alpha=0.5;
-parameter.layer_num=4;
+parameter.alpha=0.1;    %learning rate
+parameter.layer_num=4;  %number of layer
 parameter.hidden=1000;
 parameter.lstm_out_tanh=0;
-parameter.Initial=0.1;
-parameter.dropout=0;
+parameter.Initial=0.08;
+parameter.dropout=0.2;
 params.lstm_out_tanh=0;
 parameter.isTraining=1;
 parameter.CheckGrad=0;
 parameter.PreTrainEmb=0;
+%whether using pre-trained embeddings
 parameter.update_embedding=1;
+%whether update word embeddings
 parameter.batch_size=32;
 parameter.Source_Target_Same_Language=1;
+%whether source and target is of the same language. For author-encoder task, it is.
 parameter.maxGradNorm=1;
 parameter.clip=0;
 
@@ -33,9 +35,10 @@ parameter.lr=5;
 parameter.read=0;
 
 if parameter.Source_Target_Same_Language==1
-    parameter.Vocab=25000;
-    parameter.sen_stop=parameter.Vocab-1;
-    parameter.doc_stop=parameter.Vocab;
+    parameter.Vocab=25002;
+    %vocabulary size plus sentence-end and document-end
+    parameter.sen_stop=parameter.Vocab-1;   %sentence-end
+    parameter.doc_stop=parameter.Vocab;     %document-end
 else
     parameter.SourceVocab=20;
     parameter.TargetVocab=20;
@@ -56,25 +59,18 @@ parameter.nonlinear_f_prime = @tanhPrime;
 
 train_source_file='../data/train_source_permute_segment.txt';
 train_target_file='../data/train_target_permute_segment.txt';
-test_source_file='data/test.txt';
-test_target_file='data/test.txt';
 
 if 1==0
 disp('small data testing')
-train_source_file='../data/train_source_permute_segment_small.txt';
-train_target_file='../data/train_target_permute_segment_small.txt';
+train_source_file='../../LSTM_Encode_Decode/data/train_source_permute_segment_small.txt';
+train_target_file='../../LSTM_Encode_Decode/data/train_target_permute_segment_small.txt';
 end
 
-if 1==1
-train_source_file='../data/toy.txt';
-train_target_file='../data/toy1.txt';
-test_source_file='../data/toy.txt';
-test_target_file='../data/toy.txt';
-end
 
 if parameter.read==1
     disp('read');
     parameter=ReadParameter(parameter);
+    % read parameters
 else [parameter]=Initial(parameter);
 end
 
@@ -94,19 +90,13 @@ while 1
     while 1
         batch_n=batch_n+1;
         [current_batch,End]=ReadData(fd_train_source,fd_train_target,parameter);
-        %ReadParameter(parameter);
-        %decode_greedy(parameter,current_batch,'a.txt');
-
-        %batch.Label
+        %   read one batch
         if End~=1 || (End==1&& length(current_batch.source_smallBatch)~=0)
-            result=Forward(current_batch,parameter,1);
+            result=Forward(current_batch,parameter,1);  
+            % Forward
             [batch_cost,grad]=softmax(result,current_batch,parameter);
-            batch_cost
-            if batch_cost<0.1
-                decode_greedy(parameter,current_batch,'a.txt');
-            end
-            %whos
             if (isnan(batch_cost)||isinf(batch_cost)) &&End~=1
+                % if batch_cost is nan, load ealier parameters and skip latest batches
                 if parameter.clip==1
                     fprintf('die !! Hopeless!!\n');
                     disp('read done');
@@ -120,11 +110,14 @@ while 1
             end
             if parameter.isTraining==1
                 grad=Backward(current_batch,result,grad,parameter);
+                % backward propagation
                 clear result;
                 if 1==0
                     check(grad,current_batch,parameter)
+                    % check gradient
                 end
                 [parameter]=update_parameter(parameter,grad);
+                % update parameter
                 clear lstm;
                 clear c;
             end
@@ -135,25 +128,18 @@ while 1
             break;
         end
 
-        %sum_cost=sum_cost+batch_cost;
-        %sum_num=sum_num+sum(sum(batch.Mask(:,batch.MaxLenSource+1:end)));
         if mod(batch_n,100)==0
             pre_parameter=parameter;
-            SaveParameter(parameter,-1);
+            % store parameters from last 100 batches in case of gradient explosion
         end
         if mod(batch_n,500)==0 
             batch_n 
+            SaveParameter(parameter,-1);
             1000*batch_cost/batch.N_word
         end
-        %batch_cost/sum(sum(batch.Mask(:,batch.MaxLenSource+1:end)));
     end
-    if 1==0
 
     SaveParameter(parameter,iter);
-    %sum_cost/sum_num
-    Test(test_source_file,test_target_file,parameter);
-    %batch_cost/sum(sum(batch.Mask(:,batch.MaxLenSource+1:end)))
-    end
 end
 end
 function[]=check(grad,current_batch,parameter)
@@ -198,26 +184,8 @@ function[]=check(grad,current_batch,parameter)
     end
 end
 
-function[]=Test(test_source_file,test_target_file,parameter)
-    fd_test_source=fopen(test_source_file);
-    fd_test_target=fopen(test_target_file);
-    sum_cost=0;
-    sum_num=0;
-    while 1 
-        [batch,End]=ReadData(fd_test_source,fd_test_target,parameter);
-        %batch.Label
-        [lstm,h,c]=Forward(batch,parameter,1);
-        [batch_cost,grad]=softmax(h,batch,parameter);
-        sum_cost=sum_cost+batch_cost;
-        sum_num=sum_num+sum(sum(batch.Mask(:,batch.MaxLenSource+1:end)));
-        if End==1
-            fclose(fd_test_source);
-            break;
-        end
-    end
-    sum_cost/sum_num
-end
 function[parameter]=ReadParameter(parameter)
+    % read parameters
     for ll=1:parameter.layer_num
         W_file=strcat('save_parameter/_Word_S',num2str(ll));
         parameter.Word_S{ll}=gpuArray(load(W_file));
@@ -235,6 +203,7 @@ function[parameter]=ReadParameter(parameter)
 end
 
 function SaveParameter(parameter,iter)
+    % save parameters
     if iter~=-1
         all=strcat('save_parameter/',int2str(iter));
         all=strcat(all,'_');
@@ -273,24 +242,10 @@ function SaveParameter(parameter,iter)
     dlmwrite(soft_W_file,parameter.soft_W);
 end
 
-function Testing(TestBatches,parameter)
-    correct=0;
-    total=0;
-    Cost=0;
-    for j=1:length(TestBatches)
-        batch=TestBatches{j};
-        %batch.Label
-        [grad,cost,prediciton]=Forward(batch,parameter,0);
-        correct=correct+sum(prediciton==batch.Label);
-        total=total+length(prediciton);
-        Cost=Cost+cost;
-    end
-    accuracy=correct/total
-    aver_cost=Cost/total
-end
-
 function[parameter]=update_parameter(parameter,grad)
+    % update parameters
     norm=computeGradNorm(grad,parameter);
+    % compute norm
     if norm>parameter.maxGradNorm
         lr=parameter.alpha*parameter.maxGradNorm/norm;
     else lr=parameter.alpha;
@@ -336,57 +291,6 @@ function[parameter]=Initial(parameter)
     parameter.Attention_W=randomMatrix(parameter.Initial,[parameter.hidden,parameter.hidden*2]);
     parameter.Attention_U=randomMatrix(parameter.Initial,[parameter.hidden,1]);
 end
-
-function[Batches]=GetTestBatch(Source,batch_size,parameter)
-    N_batch=ceil(length(Source)/batch_size);
-    Batches={};
-    for i=1:N_batch
-        Begin=batch_size*(i-1)+1;
-        End=batch_size*i;
-        if End>length(Source)
-            End=length(Source);
-        end
-        current_batch=Batch();
-        for j=Begin:End
-            source_length=length(Source{j});
-            current_batch.SourceLength=[current_batch.SourceLength,source_length];
-            if source_length>current_batch.MaxLenSource
-                current_batch.MaxLenSource=source_length;
-            end
-        end
-        current_batch.Word=ones(End-Begin+1,current_batch.MaxLenSource);
-        Mask=ones(End-Begin+1,current_batch.MaxLenSource);
-        for j=Begin:End
-            source_length=length(Source{j});
-            current_batch.Word(j-Begin+1,current_batch.MaxLenSource-source_length+1:current_batch.MaxLenSource)=Source{j};
-            Mask(j-Begin+1,1:current_batch.MaxLenSource-source_length)=0;
-        end
-        for j=1:current_batch.MaxLenSource
-            current_batch.Delete{j}=find(Mask(:,j)==0);
-            current_batch.Left{j}=find(Mask(:,j)==1);
-        end
-        current_batch.Mask=Mask;
-        Batches{i}=current_batch;
-    end
-end
-
-function[Source]=ReadTestData(source_file,parameter)
-    fd_s=fopen(source_file);
-    tline_s = fgets(fd_s);
-    i=0;
-    Source={};
-    while ischar(tline_s)
-        i=i+1;
-        text_s=deblank(tline_s);
-        if parameter.Source_Target_Same_Language~=1
-            Source{i}=wrev(str2num(text_s))+parameter.TargetVocab;
-        else
-            Source{i}=wrev(str2num(text_s));
-        end
-        tline_s = fgets(fd_s);
-    end
-end
-
 
 function check_Attention_W(value1,i,j,current_batch,parameter)
     e=0.001;
@@ -507,6 +411,7 @@ end
 
 
 function[norm]=computeGradNorm(grad,parameter)
+    % compute gradient norm
     norm=0;
     for ii=1:parameter.layer_num
         norm=norm+double(sum(grad.Word_S{ii}(:).^2));

@@ -62,7 +62,7 @@ function[grad]=Backward_Source_Sen(docbatch,result,grad,parameter)
     clear result.lstms_source_sen;
 
     grad=DealSentenceSource(d_source_sen,docbatch,result,grad,parameter);
-    % backward propagation to source word level
+    % backward propagation to source sentences at word le
     for ll=1:parameter.layer_num
         grad.Word_S{ll}=grad.Word_S{ll}/num_sentence;
         grad.Sen_S{ll}=grad.Sen_S{ll}/num_sentence;
@@ -71,7 +71,7 @@ function[grad]=Backward_Source_Sen(docbatch,result,grad,parameter)
 end
 
 function[grad]=DealSentenceSource(d_source_sen,docbatch,result,grad,parameter)
-    % backward propagation to source word level
+    % backward propagation to source sentences at word level
     wordCount = 0;
     for i=1:length(docbatch.source_smallBatch)
         source_smallBatch=docbatch.source_smallBatch{i};
@@ -180,7 +180,6 @@ function[grad]=Backward_Target(current_batch,result,grad,parameter)
             else
                 % else gradient update for vector representations from source sentences
                 grad.source_h{ll,1}=grad.source_h{ll,1}+lstm_grad.input(end-parameter.hidden+1:end,:);
-                %
                 grad.source_c{ll,1}=grad.source_c{ll,1}+lstm_grad.dc;
             end
             grad.Sen_T{ll}=grad.Sen_T{ll}+lstm_grad.W;

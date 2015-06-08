@@ -1,4 +1,4 @@
-function[batch,Stop]=ReadData(fd_s,fd_t,parameter)
+function[batch,Stop]=ReadData(fd_s,fd_t,parameter,isTraining)
     tline_s = fgets(fd_s);
     Target={};
     Stop=0;
@@ -113,7 +113,7 @@ function[batch,Stop]=ReadData(fd_s,fd_t,parameter)
         end
     end
     
-
+    if isTraining==1
     End=0;
     doc_index=1;
     sen_index=0;
@@ -206,31 +206,32 @@ function[batch,Stop]=ReadData(fd_s,fd_t,parameter)
         target_delete{j}=find(target_sen_mask(:,j)==0);
     end
 
+    end
+
     batch.source_smallBatch=source_smallBatch;
     batch.max_source_sen=max_source_sen;
-    batch.max_target_sen=max_target_sen;
 
-    batch.target_sen_matrix=target_sen_matrix;
     batch.source_sen_matrix=source_sen_matrix;
-    batch.target_sen_mask=target_sen_mask;
     batch.source_sen_mask=source_sen_mask;
     batch.source_delete=source_delete;
     batch.source_left=source_left;
-
-    batch.target_delete=target_delete;
-    batch.target_word=target_word;
-
-    
-    clear target_sen_matrix;
     clear source_sen_matrix;
-    clear target_sen_mask;
     clear source_sen_mask;
     clear source_smallBatch;
-    clear target_doc_index_array;
-
     clear source_delete;
     clear source_left;
-    clear target_delete;
 
+    if isTraining==1
+    batch.target_sen_matrix=target_sen_matrix;
+    batch.target_sen_mask=target_sen_mask;
+    batch.target_delete=target_delete;
+    batch.target_word=target_word;
+    batch.max_target_sen=max_target_sen;
+
+    clear target_sen_matrix;
+    clear target_sen_mask;
+    clear target_doc_index_array;
+    clear target_delete;
     clear target_word;
+    end
 end

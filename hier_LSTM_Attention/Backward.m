@@ -1,16 +1,20 @@
 function[grad]=Backward(current_batch,result,grad,parameter)
     grad=Backward_Target(current_batch,result,grad,parameter);
+    % backward propagatin for target sentences
     grad=Backward_Source_Sen(current_batch,result,grad,parameter);
+    % backward propagatin for sources sentences
 end
 
 function[grad]=Backward_Source_Sen(docbatch,result,grad,parameter)
     num_sentence=size(docbatch.target_sen_matrix,1);
     for ll=1:parameter.layer_num
-        dh{ll}=grad.source_h{ll,1};
-        dc{ll}=grad.source_c{ll,1};
+        dh{ll}=grad.source_h{ll,1}; % dh
+        dc{ll}=grad.source_c{ll,1}; % dc
     end
     N=size(docbatch.source_sen_matrix,1);
+    % number of documents in current batches
     T=size(docbatch.source_sen_matrix,2);
+    % total time steps at sentence level
     zeroState=zeroMatrix([parameter.hidden,N]);
     clear grad.source_h;
     clear grad.source_c;
@@ -29,12 +33,14 @@ function[grad]=Backward_Source_Sen(docbatch,result,grad,parameter)
             lstm=result.lstms_source_sen{ll,sen_tt};
             dh{ll}(:,docbatch.source_delete{sen_tt})=0;
             dc{ll}(:,docbatch.source_delete{sen_tt})=0;
+            % set values to zero for positions without words
             if sen_tt==1
                 is_begin=1;
             else
                 is_begin=0;
             end
             [lstm_grad]=lstmUnitGrad(lstm,c_t, c_t_1,dc{ll},dh{ll},ll,sen_tt,zeroState,parameter,parameter.Sen_S{ll},is_begin);
+            % backward calculation for lstm unit at source sentence level
             lstm_grad.input(:,docbatch.source_delete{sen_tt})=0;
             dc{ll}(:,docbatch.source_delete{sen_tt})=0;
             dc{ll}=lstm_grad.dc;
@@ -58,6 +64,7 @@ function[grad]=Backward_Source_Sen(docbatch,result,grad,parameter)
     clear result.lstms_source_sen;
 
     grad=DealSentenceSource(d_source_sen,docbatch,result,grad,parameter);
+    % backward propagation to source sentences at word level
     for ll=1:parameter.layer_num
         grad.Word_S{ll}=grad.Word_S{ll}/num_sentence;
         grad.Sen_S{ll}=grad.Sen_S{ll}/num_sentence;
@@ -66,12 +73,15 @@ function[grad]=Backward_Source_Sen(docbatch,result,grad,parameter)
 end
 
 function[grad]=DealSentenceSource(d_source_sen,docbatch,result,grad,parameter)
+    % backward propagation to source sentences at word level
     wordCount = 0;
     for i=1:length(docbatch.source_smallBatch)
         source_smallBatch=docbatch.source_smallBatch{i};
         Word=source_smallBatch.Word;
         N=size(Word,1);
+        % number of sentences for current batch
         T=size(Word,2);
+        % total number of time steps
         zeroState=zeroMatrix([parameter.hidden,N]);
         for ll=1:parameter.layer_num
             dh{ll}=zeroState;
@@ -95,6 +105,7 @@ function[grad]=DealSentenceSource(d_source_sen,docbatch,result,grad,parameter)
                     is_begin=0;
                 end
                 [lstm_grad]=lstmUnitGrad(lstm,c_t, c_t_1,dc{ll},dh{ll},ll,word_tt,zeroState,parameter,parameter.Word_S{ll},is_begin);
+                % backward calculation for lstm unit at source word level
                 grad.Word_S{ll}=grad.Word_S{ll}+lstm_grad.W;
                 lstm_grad.input(:,source_smallBatch.Delete{word_tt})=0;
                 dh{ll}=lstm_grad.input(end-parameter.hidden+1:end,:);
@@ -102,6 +113,7 @@ function[grad]=DealSentenceSource(d_source_sen,docbatch,result,grad,parameter)
                 if ll~=1
                     dh{ll-1}=dh{ll-1}+lstm_grad.input(1:parameter.hidden,:);
                 else
+                    % gradient for word tokens
                     embIndices=Word(unmaskedIds,word_tt)';
                     embGrad = lstm_grad.input(1:parameter.dimension,unmaskedIds);
                     numWords = length(embIndices);
@@ -127,6 +139,7 @@ end
 
 
 function[grad]=Backward_Target(current_batch,result,grad,parameter)
+    % backward propagatin for target sentences
     num_sentence=size(current_batch.target_sen_matrix,1);
     for ll=1:parameter.layer_num
         grad.Word_T{ll}=zeroMatrix(size(parameter.Word_T{ll}));
@@ -164,6 +177,7 @@ function[grad]=Backward_Target(current_batch,result,grad,parameter)
             c_t=result.c_t_target_sen{ll,sen_tt};
             lstm=result.lstms_target_sen{ll,sen_tt};
             [lstm_grad]=lstmUnitGrad(lstm, c_t, c_t_1,grad.target_sen_c{ll,sen_tt},grad.target_sen_h{ll,sen_tt},ll,sen_tt,zeroState,parameter,parameter.Sen_T{ll},0);
+            % backpropagation for current lstm unit at sentence level
             lstm_grad.input(:,current_batch.target_delete{sen_tt+1})=0;
             lstm_grad.dc(:,current_batch.target_delete{sen_tt+1})=0;
             if sen_tt~=1
@@ -179,18 +193,24 @@ function[grad]=Backward_Target(current_batch,result,grad,parameter)
             else
                 L=lstm_grad.input(1:parameter.hidden,:);
                 dm=lstm_grad.input(parameter.hidden+1:2*parameter.hidden,:);
+                % derivatives for attention vectors
                 rep_dm=repmat(dm,1,T_source);
                 grad.source_sen=grad.source_sen+bsxfun(@times,rep_dm,reshape(result.scores{sen_tt},1,N_source*T_source));
                 da=sum(result.source_each_sen.*rep_dm);
                 da=reshape(da,N_source,T_source);
+                % derivatives for attention weights (normalzied)
                 dp=gpuArray();
                 for i=1:N_source
                     dp=[dp;da(i,:)*result.dA{sen_tt}(T_source*(i-1)+1:T_source*i,:)];
                 end
+                % derivatives for attention values before normalization
                 dp=reshape(dp,1,N_source*T_source);
                 grad.Attention_U=grad.Attention_U+sum(bsxfun(@times,result.attention_vector{sen_tt},dp),2);
+                % derivatives for Attention_U
                 d_attention_vector=arrayfun(@tanhPrimeDouble,result.attention_vector{sen_tt},parameter.Attention_U*dp);
+                % derivatives for attention vectors:  attention-value=U^T* vectors
                 grad.Attention_W=grad.Attention_W+d_attention_vector*result.attention_input{sen_tt}';
+                % derivatives for attention vectors:  vectors= tanh (W * concatenations)
                 d_input=parameter.Attention_W'*d_attention_vector;
                 clear d_attention_vector;
                 grad.source_sen=grad.source_sen+d_input(1:parameter.hidden,:);
@@ -233,6 +253,7 @@ end
 
 
 function[grad]=DealSentenceTarget(docbatch,target_sen,sen_tt,grad,end_grad,parameter,result)
+    % back propagation to target sentences
     target_word=docbatch.target_word{sen_tt};
     Word=target_word.Word;
     Word_Delete=target_word.Delete;
@@ -278,20 +299,16 @@ function[grad]=DealSentenceTarget(docbatch,target_sen,sen_tt,grad,end_grad,param
                 dh{ll}(:,Word_Delete{word_tt})=0;
                 dc{ll}(:,Word_Delete{word_tt})=0;
             end
-
+            % set values to 0
             [lstm_grad]=lstmUnitGrad(lstm, c_t, c_t_1, dc{ll}, dh{ll},ll,word_tt,zeroState,parameter,parameter.Word_T{ll},0);
-            
-        
-            %if length(end_grad)~=0 && length(Word_Delete{word_tt})~=0&&ll==parameter.layer_num
-                %lstm_grad.input(:,Word_Delete{word_tt})=0;
-                %lstm_grad.dc(:,Word_Delete{word_tt})=0;
-            %end
+            % back propagation for current word level lstm unit
             grad.Word_T{ll}=grad.Word_T{ll}+lstm_grad.W;
             dc{ll} = lstm_grad.dc;
             dc{ll}(:,Word_Delete{word_tt})=0;
             dh{ll} = lstm_grad.input(end-parameter.hidden+1:end,:);
             if length(end_grad)~=0 && length(Word_Delete{word_tt})~=0&&ll==parameter.layer_num
                 dh{ll}(:,Word_Delete{word_tt})=end_grad(:,Word_Delete{word_tt});
+                % gradients for positions that have no words stay the same
             end
 
 
@@ -305,6 +322,7 @@ function[grad]=DealSentenceTarget(docbatch,target_sen,sen_tt,grad,end_grad,param
                 end
             end
             if ll==1 
+                % gradients for word embeddings
                 embIndices=Word(unmaskedIds,word_tt)';
                 embGrad = lstm_grad.input(1:parameter.dimension,unmaskedIds);
                 numWords = length(embIndices);

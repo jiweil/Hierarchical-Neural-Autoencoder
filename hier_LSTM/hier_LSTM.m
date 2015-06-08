@@ -1,6 +1,5 @@
 function[]=hier_LSTM()
 clear;
-%matlabpool open 16
 addpath('../misc');
 n= gpuDeviceCount;
 parameter.isGPU = 0;
@@ -12,10 +11,10 @@ else
     print('no gpu ! ! ! ! !');
 end
 
-parameter.dimension=100;
+parameter.dimension=1000;
 parameter.alpha=0.1;  %learning rate
 parameter.layer_num=4;  %number of layer
-parameter.hidden=100;
+parameter.hidden=1000;
 parameter.lstm_out_tanh=0;
 parameter.Initial=0.1;
 parameter.dropout=0.2;  %drop-out rate
@@ -60,9 +59,7 @@ parameter.nonlinear_f_prime = @tanhPrime;
 
 train_source_file='../data/train_source_permute_segment.txt';
 train_target_file='../data/train_target_permute_segment.txt';
-test_source_file='data/test.txt';
-test_target_file='data/test.txt';
-if 1==1
+if 1==0
 train_source_file='../../LSTM_Encode_Decode/data/train_source_permute_segment.txt';
 train_target_file='../../LSTM_Encode_Decode/data/train_target_permute_segment.txt';
 end
@@ -88,7 +85,7 @@ while 1
     while 1
         batch_n=batch_n+1;
         batch_n
-        [current_batch,End]=ReadData(fd_train_source,fd_train_target,parameter);
+        [current_batch,End]=ReadData(fd_train_source,fd_train_target,parameter,1);
         %   read one batch
         if End~=1 || (End==1&& length(current_batch.source_smallBatch)~=0)
             result=Forward(current_batch,parameter,1);  % Forward 

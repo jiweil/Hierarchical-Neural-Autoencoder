@@ -94,28 +94,36 @@ while 1
         batch_n=batch_n+1;
         [batch,End]=ReadTrainData(fd_train_source,fd_train_target,parameter);   %transform data to batches
         
-        if End~=1 || (End==1&& length(batch.Word)~=0)   %not the end of document
-            [lstm,all_h_t,c]=Forward(batch,parameter,1);    %LSTM Forward
+        if End~=1 || (End==1&& length(batch.Word)~=0)   
+            %not the end of document
+            [lstm,all_h_t,c]=Forward(batch,parameter,1);    
+            %LSTM Forward
             disp('forward done')
-            [batch_cost,grad]=softmax(all_h_t(parameter.layer_num,:),batch,parameter);      %softmax
+            [batch_cost,grad]=softmax(all_h_t(parameter.layer_num,:),batch,parameter);      
+            %softmax
             disp('softmax done')
             clear all_h_t;
-            if (isnan(batch_cost)||isinf(batch_cost)) &&End~=1  %if gradient explodes
+            if (isnan(batch_cost)||isinf(batch_cost)) &&End~=1  
+            %if gradient explodes
                 if parameter.clip==1
                     fprintf('die !! Hopeless!!\n');
                     disp('read done');
-                    parameter=pre_parameter;    %load parameters stores from last step, and skip lately used batches
+                    parameter=pre_parameter;    
+                    %load parameters stores from last step, and skip lately used batches
                     disp(batch_n)
                 else parameter.clip=1;
                 end
-                if End==1 break;    %end of documents
+                if End==1 break;    
+                %end of documents
                 else continue;
                 end
             end
             if parameter.isTraining==1
-                grad=Backward(batch,grad,parameter,lstm,c);     %backward
+                grad=Backward(batch,grad,parameter,lstm,c);     
+                %backward propagation
                 disp('backward done')
-                [parameter]=update_parameter(parameter,grad);   %update parameter
+                [parameter]=update_parameter(parameter,grad);   
+                %update parameter
                 clear lstm;
                 clear c;
             end
@@ -126,7 +134,8 @@ while 1
             break;
         end
 
-        if mod(batch_n,500)==0  %save parameter every 500 batches
+        if mod(batch_n,500)==0  
+            %save parameter every 500 batches
             pre_parameter=parameter;
             SaveParameter(parameter,-1);
         end
@@ -135,11 +144,13 @@ while 1
             1000*batch_cost/batch.N_word
         end
     end
-    SaveParameter(parameter,iter);  %save parameter
+    SaveParameter(parameter,iter);  
+    %save parameter
 end
 end
 
-function[parameter]=ReadParameter(parameter)    %read parameter
+function[parameter]=ReadParameter(parameter)    
+    %read parameter
     for ll=1:parameter.layer_num
         W_file=strcat('save_parameter/_W_S',num2str(ll));
         parameter.W_S{ll}=gpuArray(load(W_file));
@@ -174,10 +185,13 @@ function SaveParameter(parameter,iter)
     dlmwrite(soft_W_file,parameter.soft_W);
 end
 
-function[parameter]=update_parameter(parameter,grad)    %update parameters
-    norm=computeGradNorm(grad,parameter);       %compute normalization
+function[parameter]=update_parameter(parameter,grad)    
+    %update parameters
+    norm=computeGradNorm(grad,parameter);       
+    %compute normalization
     if norm>parameter.maxGradNorm
-        lr=parameter.alpha*parameter.maxGradNorm/norm;  %normalizing
+        lr=parameter.alpha*parameter.maxGradNorm/norm;  
+        %normalizing
     else lr=parameter.alpha;
     end
     for ll=1:parameter.layer_num
@@ -219,11 +233,14 @@ function[current_batch,End]=ReadTrainData(fd_s,fd_t,parameter)
         text_s=deblank(tline_s);
         text_t=deblank(tline_t);
         if parameter.Source_Target_Same_Language~=1
-            Source{i}=wrev(str2num(text_s))+parameter.TargetVocab;  %reverse inputs
+            Source{i}=wrev(str2num(text_s))+parameter.TargetVocab;  
+            %reverse inputs
         else
-            Source{i}=wrev(str2num(text_s));    %reverse inputs
+            Source{i}=wrev(str2num(text_s));    
+            %reverse inputs
         end
-        Target{i}=[str2num(text_t),parameter.stop];     %add document_end_token
+        Target{i}=[str2num(text_t),parameter.stop];     
+        %add document_end_token
         if i==parameter.batch_size
             break;
         end
@@ -254,10 +271,12 @@ function[current_batch,End]=ReadTrainData(fd_s,fd_t,parameter)
     for j=1:N
         source_length=length(Source{j});
         target_length=length(Target{j});
-        current_batch.Word(j,current_batch.MaxLenSource-source_length+1:current_batch.MaxLenSource)=Source{j};      %words from sentneces 
+        current_batch.Word(j,current_batch.MaxLenSource-source_length+1:current_batch.MaxLenSource)=Source{j};      
+        %words within sentences 
         current_batch.Word(j,current_batch.MaxLenSource+1:current_batch.MaxLenSource+target_length)=Target{j};
-        Mask(j,1:current_batch.MaxLenSource-source_length)=0;       %Mask
-        Mask(j,current_batch.MaxLenSource+target_length+1:end)=0;   %Mask
+        Mask(j,1:current_batch.MaxLenSource-source_length)=0;       
+        Mask(j,current_batch.MaxLenSource+target_length+1:end)=0;   
+        % label positions without tokens 0
         current_batch.N_word=current_batch.N_word+target_length;
     end
     for j=1:total_length
