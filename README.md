@@ -7,7 +7,7 @@ GPU
 
 matlab >= 2014b
 
-memory >= 2GB
+memory >= 4GB
 
 
 
@@ -23,6 +23,8 @@ hier_LSTM_Attention: Hierarchical LSTM Autoencoder with Attention
 - `train_permute.txt`: training data for standard Model. Each line corresponds to one document/paragraph
 - `train_source_permute_segment.txt`: source training data for hierarchical Models. Each line corresponds to one sentence. An empty line starts a new document/sentence. Documents are reversed. 
 - `test_source_permute_segment.txt`: target training data for hierarchical Model.
+
+Training roughly takes 2-3 weeks for standard models and 4-6 weeks for hierarchical models on a K40 GPU machine.
 
 
 For any question or bug with the code, feel free to contact jiweil@stanford.edu
