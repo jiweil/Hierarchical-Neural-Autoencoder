@@ -1,15 +1,14 @@
 function[]=decode_beam(parameter,TestBatches,filename)
     disp('decode')
-    parameter.beamSize=3;
+    parameter.beamSize=7;
     for batch_index=1:length(TestBatches)
+        batch_index
         batch=TestBatches{batch_index};
-        max_length=floor(batch.MaxLenSource*1.5);
+        max_length=floor(batch.MaxLenSource*1);
         Word=batch.Word;
         N=size(Word,1);
         SourceLength=batch.SourceLength;
-        [lstms,all_h_t,all_c_t]=Forward(batch,parameter,0);
-        last_h_t=all_h_t(:,size(Word,2));
-        last_c_t=all_c_t(:,size(Word,2));
+        [lstms,last_h_t,last_c_t]=Forward(batch,parameter,0);
         numElements =N*parameter.beamSize;
         translations=-zeroMatrix([N,max_length]);
         [first_scores,first_words]=BeamStep(parameter,last_h_t{parameter.layer_num},1);
@@ -57,11 +56,12 @@ function[]=decode_beam(parameter,TestBatches,filename)
                 if position==max_length
                     end_index=sorted_Indices(1);
                     previous_index=floor((end_index-1)/parameter.beamSize)+1;
-                    translations(sentId,1:position)=[beamHistory((sentId-1)*parameter.beamSize+previous_index,1:position-1),sorted_next_words(1)];
+                    translations(sentId,1:position+1)=[beamHistory((sentId-1)*parameter.beamSize+previous_index,1:position),sorted_next_words(1)];
                     continue;
                 end
                 next_word_index=find(sorted_Indices~=parameter.stop,parameter.beamSize);
-                previous_index=(sentId-1)*parameter.beamSize+floor((next_word_index-1)/parameter.beamSize)+1;
+                beamScores(parameter.beamSize*(sentId-1)+1:parameter.beamSize*sentId)=all_next_scores(next_word_index,sentId);
+                previous_index=(sentId-1)*parameter.beamSize+ floor((sorted_Indices(next_word_index)-1)/parameter.beamSize)+1;
                 T=(sentId-1)*parameter.beamSize+1:(sentId-1)*parameter.beamSize+parameter.beamSize;
                 beamHistory(T,:)=beamHistory(previous_index,:);
                 beamHistory(T,position+1)=sorted_next_words(1:parameter.beamSize);
@@ -78,7 +78,7 @@ function[]=decode_beam(parameter,TestBatches,filename)
         
         for senId=1:N
             vector=translations(senId,:);
-            vector=vector(1:floor(1.5*batch.SourceLength(senId)));
+            vector=vector(1:floor(1*batch.SourceLength(senId)));
             stop_sign=find(vector==parameter.stop);
             if length(stop_sign)==0
                 dlmwrite(filename,vector,'delimiter',' ','-append');
@@ -90,14 +90,14 @@ function[]=decode_beam(parameter,TestBatches,filename)
 end
 
 function[select_logP,select_words]=BeamStep(parameter,h_t,isFirst)
-    if isFirst==1 scores=parameter.soft_W(1:end-1,:)*h_t;
-    else scores=parameter.soft_W*h_t;
+    if isFirst==1 scores=parameter.soft_W(2:end-1,:)*h_t;
+    else scores=parameter.soft_W(2:end,:)*h_t;
     end
     mx = max(scores);
     scores = bsxfun(@minus, scores, mx);
     logP=bsxfun(@minus, scores, log(sum(exp(scores))));
     [sortedLogP, sortedWords]=sort(logP, 'descend');
-    select_words=sortedWords(1:parameter.beamSize, :);
+    select_words=1+sortedWords(1:parameter.beamSize, :);
     select_logP=sortedLogP(1:parameter.beamSize, :);
     probs=exp(scores);
     norms = sum(probs, 1);
