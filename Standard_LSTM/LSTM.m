@@ -6,7 +6,7 @@ parameter.isGPU = 0;
 
 if n>0 % GPU exists
     parameter.isGPU = 1;
-    gpuDevice(2);
+    gpuDevice(1);
 else
     print('no gpu ! ! ! ! !');
 end
@@ -98,10 +98,8 @@ while 1
             %not the end of document
             [lstm,all_h_t,c]=Forward(batch,parameter,1);    
             %LSTM Forward
-            disp('forward done')
             [batch_cost,grad]=softmax(all_h_t(parameter.layer_num,:),batch,parameter);      
             %softmax
-            disp('softmax done')
             clear all_h_t;
             if (isnan(batch_cost)||isinf(batch_cost)) &&End~=1  
             %if gradient explodes
@@ -137,11 +135,6 @@ while 1
         if mod(batch_n,500)==0  
             %save parameter every 500 batches
             pre_parameter=parameter;
-            SaveParameter(parameter,-1);
-        end
-        if mod(batch_n,500)==0 
-            batch_n 
-            1000*batch_cost/batch.N_word
         end
     end
     SaveParameter(parameter,iter);  

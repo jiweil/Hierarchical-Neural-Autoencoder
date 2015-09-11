@@ -6,7 +6,7 @@ parameter.isGPU = 0;
 
 if n>0 % GPU exists
     parameter.isGPU = 1;
-    gpuDevice(2);
+    gpuDevice(1);
 else
     print('no gpu ! ! ! ! !');
 end
@@ -127,12 +127,6 @@ while 1
             % store parameters from last 100 batches in case of gradient explosion
         end
 
-        if mod(batch_n,500)==0 
-            batch_n 
-            SaveParameter(parameter,-1);
-            % save parameters
-            1000*batch_cost/batch.N_word
-        end
     end
     SaveParameter(parameter,iter);
     % save parameters
