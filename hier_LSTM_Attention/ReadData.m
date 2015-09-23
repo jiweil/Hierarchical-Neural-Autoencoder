@@ -37,6 +37,10 @@ function[batch,Stop]=ReadData(fd_s,fd_t,parameter)
     if ischar(tline_s)==0
         Stop=1;
     end
+    if exist('sourceDoc')==0
+        batch.source_smallBatch=[];
+        return;
+    end
     batch.num_of_source_sen=num_of_sen;
     source_sen_matrix=ones(length(sourceDoc),max_source_sen);
     source_sen_mask=ones(length(sourceDoc),max_source_sen);
