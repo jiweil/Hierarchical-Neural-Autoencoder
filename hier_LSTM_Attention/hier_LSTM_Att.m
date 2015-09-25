@@ -17,7 +17,7 @@ parameter.layer_num=4;  %number of layer
 parameter.hidden=1000;
 parameter.lstm_out_tanh=0;
 parameter.Initial=0.08;
-parameter.dropout=0.2;
+parameter.dropout=0;
 params.lstm_out_tanh=0;
 parameter.isTraining=1;
 parameter.CheckGrad=0;
@@ -74,6 +74,7 @@ if parameter.read==1
 else [parameter]=Initial(parameter);
 end
 
+pre_parameter=parameter;
 
 iter=0;
 
@@ -89,6 +90,7 @@ while 1
     batch_n=0;
     while 1
         batch_n=batch_n+1;
+        batch_n
         [current_batch,End]=ReadData(fd_train_source,fd_train_target,parameter);
         %   read one batch
         if End~=1 || (End==1&& length(current_batch.source_smallBatch)~=0)
