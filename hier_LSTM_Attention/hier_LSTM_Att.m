@@ -25,7 +25,7 @@ parameter.PreTrainEmb=0;
 %whether using pre-trained embeddings
 parameter.update_embedding=1;
 %whether update word embeddings
-parameter.batch_size=32;
+parameter.batch_size=16;
 parameter.Source_Target_Same_Language=1;
 %whether source and target is of the same language. For author-encoder task, it is.
 parameter.maxGradNorm=1;
@@ -136,7 +136,7 @@ while 1
         end
     end
 
-    SaveParameter(parameter,iter);
+    %SaveParameter(parameter,iter);
 end
 end
 function[]=check(grad,current_batch,parameter)
