@@ -134,7 +134,7 @@ while 1
         end
     end
 
-    %SaveParameter(parameter,iter);
+    SaveParameter(parameter,iter);
 end
 end
 function[]=check(grad,current_batch,parameter)
