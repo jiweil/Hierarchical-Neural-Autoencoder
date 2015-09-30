@@ -57,13 +57,13 @@ parameter.nonlinear_f = @tanh;
 parameter.nonlinear_f_prime = @tanhPrime;
 
 
-train_source_file='../data/train_source_permute_segment.txt';
-train_target_file='../data/train_target_permute_segment.txt';
+train_source_file='data/train_source_permute_segment.txt';
+train_target_file='data/train_target_permute_segment.txt';
 
 if 1==0
 disp('small data testing')
-train_source_file='../../LSTM_Encode_Decode/data/train_source_permute_segment_small.txt';
-train_target_file='../../LSTM_Encode_Decode/data/train_target_permute_segment_small.txt';
+train_source_file='small_data/train_source_permute_segment_small.txt';
+train_target_file='small_data/train_target_permute_segment_small.txt';
 end
 
 
@@ -82,7 +82,6 @@ disp('begin')
 
 while 1
     iter=iter+1
-    End=0;
     fd_train_source=fopen(train_source_file);
     fd_train_target=fopen(train_target_file);
     sum_cost=0;
@@ -90,7 +89,6 @@ while 1
     batch_n=0;
     while 1
         batch_n=batch_n+1;
-        batch_n
         [current_batch,End]=ReadData(fd_train_source,fd_train_target,parameter);
         %   read one batch
         if End~=1 || (End==1&& length(current_batch.source_smallBatch)~=0)

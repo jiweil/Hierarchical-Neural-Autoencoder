@@ -38,6 +38,7 @@ function[batch,Stop]=ReadData(fd_s,fd_t,parameter)
         Stop=1;
     end
     if exist('sourceDoc')==0
+        Stop=1;
         batch.source_smallBatch=[];
         return;
     end
